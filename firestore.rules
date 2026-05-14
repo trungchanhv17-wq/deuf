@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return request.auth.token.email_verified == true; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- Entity Validators ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'isPremium', 'role', 'createdAt']) 
+        && data.keys().size() == 4
+        && data.email is string && data.email.size() <= 256
+        && data.isPremium is bool
+        && data.role in ['user', 'admin']
+        && (data.createdAt is timestamp || data.createdAt is int); // Flex for creation
+    }
+
+    function isValidHistory(data) {
+      return data.keys().hasAll(['userId', 'type', 'data', 'timestamp'])
+        && data.userId == request.auth.uid
+        && data.type in ['translation', 'quiz']
+        && data.timestamp is int;
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['userId', 'email', 'amount', 'status', 'timestamp'])
+        && data.userId == request.auth.uid
+        && data.email == request.auth.token.email
+        && data.status in ['pending', 'completed']
+        && data.timestamp is int;
+    }
+
+    // --- Routes ---
+
+    match /users/{userId} {
+      allow list: if isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isEmailVerified() && isValidUser(incoming()) && incoming().role == 'user';
+      allow update: if (isAdmin() || (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['email']))) 
+                    && isValidUser(incoming());
+    }
+
+    match /history/{historyId} {
+      allow list: if isOwner(resource.data.userId);
+      allow get: if isOwner(resource.data.userId);
+      allow create: if isSignedIn() && isValidHistory(incoming());
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    match /payments/{paymentId} {
+      allow list: if isAdmin();
+      allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(paymentId) && isValidPayment(incoming());
+      allow update: if isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+    }
+
+    match /admins/{userId} {
+      allow get: if isSignedIn();
+    }
+  }
+}

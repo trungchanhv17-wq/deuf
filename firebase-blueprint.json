@@ -1,0 +1,59 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile data including subscription status",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "isPremium": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "isPremium", "role", "createdAt"]
+    },
+    "History": {
+      "title": "Learning History",
+      "description": "Records of translations and quiz attempts",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["translation", "quiz"] },
+        "data": { "type": "object" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["userId", "type", "data", "timestamp"]
+    },
+    "Payment": {
+      "title": "Payment Request",
+      "description": "Requests for premium upgrades",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "email": { "type": "string" },
+        "amount": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "completed"] },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["userId", "email", "amount", "status", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Root user profile"
+    },
+    "/history/{historyId}": {
+      "schema": "History",
+      "description": "Linear history for all users"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Global payment tracking for admins"
+    },
+    "/admins/{userId}": {
+      "schema": "object",
+      "description": "Whitelist of administrative UIDs"
+    }
+  }
+}
