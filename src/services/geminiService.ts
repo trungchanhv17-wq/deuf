@@ -1,7 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TranslationResult, FeedbackResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+function getAI() {
+  if (!aiInstance) {
+    aiInstance = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return aiInstance;
+}
 
 const SYSTEM_PROMPT = `Bạn là một chuyên gia ngôn ngữ tiếng Đức hướng dẫn người Việt học tiếng Đức. 
 Nhiệm vụ của bạn là:
@@ -32,8 +38,8 @@ Lưu ý: Chỉ trả về một đối tượng JSON có thuộc tính "prompt".
 
 export async function generateQuizPrompt(): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const response = await getAI().models.generateContent({
+      model: "gemini-1.5-flash",
       contents: "Hãy cho tôi một câu tiếng Việt mới để luyện dịch.",
       config: {
         systemInstruction: SYSTEM_PROMPT_GENERATOR,
@@ -58,8 +64,8 @@ export async function generateQuizPrompt(): Promise<string> {
 
 export async function checkTranslation(vietnamesePrompt: string, userAttempt: string): Promise<FeedbackResult> {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const response = await getAI().models.generateContent({
+      model: "gemini-1.5-flash",
       contents: `Câu gốc: "${vietnamesePrompt}"\nNgười dùng dịch: "${userAttempt}"`,
       config: {
         systemInstruction: SYSTEM_PROMPT_CHECKER,
@@ -90,8 +96,8 @@ export async function checkTranslation(vietnamesePrompt: string, userAttempt: st
 
 export async function translateToGerman(vietnameseText: string): Promise<TranslationResult> {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+    const response = await getAI().models.generateContent({
+      model: "gemini-1.5-flash",
       contents: vietnameseText,
       config: {
         systemInstruction: SYSTEM_PROMPT,

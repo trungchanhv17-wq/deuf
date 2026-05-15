@@ -3,10 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Send, X, Bot, Sparkles, Loader2, HelpCircle } from 'lucide-react';
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 export const AIAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const ai = React.useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
   const [messages, setMessages] = useState<{role: 'user' | 'bot', text: string}[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +32,7 @@ export const AIAssistant: React.FC = () => {
       }));
 
       const response = await ai.models.generateContent({ 
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: [
           ...chatHistory,
           { role: 'user', parts: [{ text: userMsg }] }
